@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;net6.0;net7.0</TargetFrameworks>
+    <PolySharpIncludeRuntimeSupportedAttributes>true</PolySharpIncludeRuntimeSupportedAttributes>
     <DefineConstants>$(DefineConstants);VALIDATE_USAGE</DefineConstants>
     <DefineConstants Condition="'$(ExcludeD3D11)' == 'true'">$(DefineConstants);EXCLUDE_D3D11_BACKEND</DefineConstants>
     <DefineConstants Condition="'$(ExcludeD3D12)' == 'true'">$(DefineConstants);EXCLUDE_D3D12_BACKEND</DefineConstants>
@@ -10,8 +11,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="D3DCommon/**/*" Condition="'$(ExcludeD3D11)' == 'true' AND '$(ExcludeD3D12)' == 'true'" />
     <Compile Remove="D3D11/**/*" Condition="'$(ExcludeD3D11)' == 'true'" />
-    <Compile Remove="D3D11/**/*" Condition="'$(ExcludeD3D12)' == 'true'" />
+    <Compile Remove="D3D12/**/*" Condition="'$(ExcludeD3D12)' == 'true'" />
     <Compile Remove="Vulkan/**/*" Condition="'$(ExcludeVulkan)' == 'true'" />
     <Compile Remove="Metal/**/*" Condition="'$(ExcludeMetal)' == 'true'" />
   </ItemGroup>
