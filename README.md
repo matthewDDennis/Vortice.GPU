@@ -1,14 +1,7 @@
-[![Build status](https://github.com/amerkoleci/Vortice.Gpu/workflows/Build/badge.svg)](https://github.com/amerkoleci/Vortice.Gpu/actions)
+[![Build status](https://github.com/amerkoleci/Vortice.GPU/workflows/Build/badge.svg)](https://github.com/amerkoleci/Vortice.GPU/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://github.com/amerkoleci/Vortice.Gpu/blob/main/LICENSE)
 
-**Vortice.Gpu** is a low-level cross platform .NET GPU library written in C# distributed under [MIT License](https://github.com/amerkoleci/Vortice.Gpu/blob/main/LICENSE).
-
-## Why .NET game engine?
-
-* Lack of modern .NET game engine/framework with recent C# 11 features
-* There are lot of C++ engines/framework
-* Faster development times and interation
-* Brings gamedev libs to .NET world
+**Vortice.GPU** is a low-level cross platform .NET GPU library written in C# distributed under [MIT License](https://github.com/amerkoleci/Vortice.GPU/blob/main/LICENSE).
 
 ## Features
 
