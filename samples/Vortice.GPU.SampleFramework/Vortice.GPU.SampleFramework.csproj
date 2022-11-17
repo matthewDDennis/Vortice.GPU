@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net6.0;net7.0</TargetFrameworks>
+    <RootNamespace>Vortice.GPU</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Vortice.GPU\Vortice.GPU.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Ultz.Native.GLFW" />
+  </ItemGroup>
+
+</Project>
