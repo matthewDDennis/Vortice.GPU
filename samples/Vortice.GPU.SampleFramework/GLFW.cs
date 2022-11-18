@@ -190,10 +190,7 @@ public static unsafe class GLFW
     public const int GLFW_TRUE = 1;
     public const int GLFW_FALSE = 0;
 
-    private static readonly IntPtr s_library;
-
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-    private delegate void glfwTerminate_t();
+    private static readonly nint s_library;
 
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     private delegate void glfwInitHint_t(int hint, int value);
@@ -225,9 +222,9 @@ public static unsafe class GLFW
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     private delegate sbyte** glfwGetRequiredInstanceExtensions_t(out int count);
 
-    private static delegate* unmanaged[Cdecl]<int> s_glfwInit;
+    private static readonly delegate* unmanaged[Cdecl]<int> s_glfwInit;
+    private static readonly delegate* unmanaged[Cdecl]<int> s_glfwTerminate;
 
-    private static readonly glfwTerminate_t s_glfwTerminate;
     private static readonly glfwInitHint_t s_glfwInitHint;
     private static readonly glfwGetVersion_t s_glfwGetVersion;
     private static readonly glfwSetErrorCallback_t s_glfwSetErrorCallback;
@@ -303,7 +300,7 @@ public static unsafe class GLFW
         s_library = LoadGLFWLibrary();
 
         s_glfwInit = (delegate* unmanaged[Cdecl]<int>)GetSymbol(nameof(glfwInit));
-        s_glfwTerminate = LoadFunction<glfwTerminate_t>(nameof(glfwTerminate));
+        s_glfwTerminate = (delegate* unmanaged[Cdecl]<int>)GetSymbol(nameof(glfwTerminate));
         s_glfwInitHint = LoadFunction<glfwInitHint_t>(nameof(glfwInitHint));
         s_glfwGetVersion = LoadFunction<glfwGetVersion_t>(nameof(glfwGetVersion));
         s_glfwSetErrorCallback = LoadFunction<glfwSetErrorCallback_t>(nameof(glfwSetErrorCallback));

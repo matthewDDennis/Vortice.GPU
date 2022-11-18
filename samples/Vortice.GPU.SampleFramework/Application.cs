@@ -37,12 +37,20 @@ public abstract class Application : IDisposable
 
         glfwWindowHint((int)WindowHintClientApi.ClientApi, 0);
 
+        ValidationMode validationMode = ValidationMode.Disabled;
+#if DEBUG
+        validationMode = ValidationMode.Enabled;
+#endif
+        GPUDevice = GPUDevice.CreateDefault(validationMode);
+
         // Create main window.
         Name = name;
         MainWindow = new Window(name, 1280, 720);
     }
 
     public string Name { get; }
+
+    public GPUDevice GPUDevice { get; }
 
     public Window MainWindow { get; }
 
@@ -80,6 +88,7 @@ public abstract class Application : IDisposable
 
     public void Run()
     {
+        InitializeBeforeRun();
         Initialize();
 
         while (!MainWindow.ShoudClose)
@@ -100,6 +109,11 @@ public abstract class Application : IDisposable
         {
             throw new ObjectDisposedException(GetType().Name);
         }
+    }
+
+    private void InitializeBeforeRun()
+    {
+
     }
 
     private static unsafe void GlfwError(int code, IntPtr message)

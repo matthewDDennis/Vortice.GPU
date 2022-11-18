@@ -13,7 +13,7 @@ public abstract class GPUObject : IDisposable
 #else
     private volatile int _isDisposed;
 #endif
-    private string _label;
+    protected string _label;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GPUObject" /> class.

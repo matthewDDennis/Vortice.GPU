@@ -10,6 +10,10 @@ namespace Vortice.GPU;
 public enum PixelFormatSupport : uint
 {
     None = 0,
-    ShaderRead = 1 << 0,
-    ShaderWrite = 1 << 1,
+    ShaderLoad = 0x00000001,
+    ShaderSample = 0x00000002,
+    ShaderWrite = 0x00000004,
+    RenderTarget = 0x00000008,
+    DepthStencil = 0x00000010,
+    Blendable = 0x00000020,
 }
