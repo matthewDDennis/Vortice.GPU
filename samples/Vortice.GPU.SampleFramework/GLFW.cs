@@ -166,6 +166,26 @@ public enum WindowHintBool
 
 
 [DebuggerDisplay("{DebuggerDisplay,nq}")]
+public readonly partial struct GLFWwindow : IEquatable<GLFWwindow>
+{
+    public GLFWwindow(nint handle) { Handle = handle; }
+    public nint Handle { get; }
+    public bool IsNull => Handle == 0;
+    public static GLFWwindow Null => new(0);
+    public static implicit operator GLFWwindow(nint handle) => new(handle);
+    public static bool operator ==(GLFWwindow left, GLFWwindow right) => left.Handle == right.Handle;
+    public static bool operator !=(GLFWwindow left, GLFWwindow right) => left.Handle != right.Handle;
+    public static bool operator ==(GLFWwindow left, nint right) => left.Handle == right;
+    public static bool operator !=(GLFWwindow left, nint right) => left.Handle != right;
+    public bool Equals(GLFWwindow other) => Handle == other.Handle;
+    /// <inheritdoc/>
+    public override bool Equals(object? obj) => obj is GLFWwindow handle && Equals(handle);
+    /// <inheritdoc/>
+    public override int GetHashCode() => Handle.GetHashCode();
+    private string DebuggerDisplay => string.Format("GLFWwindow [0x{0}]", Handle.ToString("X"));
+}
+
+[DebuggerDisplay("{DebuggerDisplay,nq}")]
 public readonly partial struct GLFWmonitor : IEquatable<GLFWmonitor>
 {
     public GLFWmonitor(nint handle) { Handle = handle; }
@@ -193,56 +213,31 @@ public static unsafe class GLFW
     private static readonly nint s_library;
 
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-    private delegate void glfwInitHint_t(int hint, int value);
-
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-    private delegate void glfwGetVersion_t(int* major, int* minor, int* revision);
-
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-    private delegate glfwErrorCallback glfwSetErrorCallback_t(glfwErrorCallback callback);
-
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     public delegate void glfwErrorCallback(int code, IntPtr message);
 
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-    public delegate nint glfwCreateWindow_t(int width, int height, byte* title, GLFWmonitor* monitor, nint share);
-
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-    public delegate GLFWmonitor* glfwGetPrimaryMonitor_t();
-
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-    public delegate void glfwGetWindowSize_t(nint window, out int width, out int height);
-
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-    public delegate void glfwShowWindow_t(nint window);
-
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-    private delegate void glfwPollEvents_t();
-
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-    private delegate sbyte** glfwGetRequiredInstanceExtensions_t(out int count);
-
+    private static readonly delegate* unmanaged[Cdecl]<out int, out int, out int, void> s_glfwGetVersion;
     private static readonly delegate* unmanaged[Cdecl]<int> s_glfwInit;
     private static readonly delegate* unmanaged[Cdecl]<int> s_glfwTerminate;
+    private static readonly delegate* unmanaged[Cdecl]<int, int, void> s_glfwInitHint;
 
-    private static readonly glfwInitHint_t s_glfwInitHint;
-    private static readonly glfwGetVersion_t s_glfwGetVersion;
-    private static readonly glfwSetErrorCallback_t s_glfwSetErrorCallback;
+    private static readonly delegate* unmanaged[Cdecl]<glfwErrorCallback, glfwErrorCallback> s_glfwSetErrorCallback;
 
-    private static readonly glfwInitHint_t s_glfwWindowHint;
-    private static readonly glfwCreateWindow_t s_glfwCreateWindow;
-    private static readonly delegate* unmanaged[Cdecl]<nint, int> s_glfwWindowShouldClose;
-    private static readonly glfwGetWindowSize_t s_glfwGetWindowSize;
-    private static readonly glfwShowWindow_t s_glfwShowWindow;
-    private static readonly glfwGetPrimaryMonitor_t s_glfwGetPrimaryMonitor;
-    private static readonly glfwPollEvents_t s_glfwPollEvents;
-    private static readonly glfwGetRequiredInstanceExtensions_t s_glfwGetRequiredInstanceExtensions;
-    //private static readonly delegate* unmanaged[Cdecl]<VkInstance, GLFWwindow*, void*, VkSurfaceKHR*, int> s_glfwCreateWindowSurface;
+    private static readonly delegate* unmanaged[Cdecl]<int, int, void> s_glfwWindowHint;
+    private static readonly delegate* unmanaged[Cdecl]<int, int, byte*, GLFWmonitor*, nint, GLFWwindow*> s_glfwCreateWindow;
+    private static readonly delegate* unmanaged[Cdecl]<GLFWwindow*, int> s_glfwDestroyWindow;
+    private static readonly delegate* unmanaged[Cdecl]<GLFWwindow*, int> s_glfwWindowShouldClose;
+    private static readonly delegate* unmanaged[Cdecl]<GLFWwindow*, out int, out int, void> s_glfwGetWindowSize;
+    private static readonly delegate* unmanaged[Cdecl]<GLFWwindow*, void> s_glfwShowWindow;
+    private static readonly delegate* unmanaged[Cdecl]<GLFWmonitor*> s_glfwGetPrimaryMonitor;
+    private static readonly delegate* unmanaged[Cdecl]<void> s_glfwPollEvents;
+    private static readonly delegate* unmanaged[Cdecl]<GLFWmonitor*, sbyte*> s_glfwGetWin32Adapter;
+    private static readonly delegate* unmanaged[Cdecl]<GLFWmonitor*, sbyte*> s_glfwGetWin32Monitor;
+    private static readonly delegate* unmanaged[Cdecl]<GLFWwindow*, nint> s_glfwGetWin32Window;
 
     public static bool glfwInit() => s_glfwInit() == GLFW_TRUE;
     public static void glfwTerminate() => s_glfwTerminate();
 
-    public static void glfwGetVersion(int* major, int* minor, int* revision) => s_glfwGetVersion(major, minor, revision);
+    public static void glfwGetVersion(out int major, out int minor, out int revision) => s_glfwGetVersion(out major, out minor, out revision);
     public static glfwErrorCallback glfwSetErrorCallback(glfwErrorCallback callback) => s_glfwSetErrorCallback(callback);
 
     public static void glfwInitHint(InitHintBool hint, bool value) => s_glfwInitHint((int)hint, value ? GLFW_TRUE : GLFW_FALSE);
@@ -252,7 +247,7 @@ public static unsafe class GLFW
     public static void glfwWindowHint(WindowHintBool hint, bool value) => s_glfwWindowHint((int)hint, value ? GLFW_TRUE : GLFW_FALSE);
 
 
-    public static nint glfwCreateWindow(int width, int height, string title, GLFWmonitor* monitor, nint share = 0)
+    public static GLFWwindow* glfwCreateWindow(int width, int height, string title, GLFWmonitor* monitor, nint share = 0)
     {
         var ptr = Marshal.StringToHGlobalAnsi(title);
 
@@ -265,58 +260,46 @@ public static unsafe class GLFW
             Marshal.FreeHGlobal(ptr);
         }
     }
-    public static bool glfwWindowShouldClose(nint window) => s_glfwWindowShouldClose(window) == GLFW_TRUE;
 
-    public static void glfwGetWindowSize(nint window, out int width, out int height) => s_glfwGetWindowSize(window, out width, out height);
-    public static void glfwShowWindow(nint window) => glfwShowWindow(window);
+    public static void glfwDestroyWindow(GLFWwindow* window) => s_glfwDestroyWindow(window);
+
+    public static bool glfwWindowShouldClose(GLFWwindow* window) => s_glfwWindowShouldClose(window) == GLFW_TRUE;
+
+    public static void glfwGetWindowSize(GLFWwindow* window, out int width, out int height) => s_glfwGetWindowSize(window, out width, out height);
+    public static void glfwShowWindow(GLFWwindow* window) => glfwShowWindow(window);
 
     public static GLFWmonitor* glfwGetPrimaryMonitor() => s_glfwGetPrimaryMonitor();
 
-
     public static void glfwPollEvents() => s_glfwPollEvents();
 
-    public static sbyte** glfwGetRequiredInstanceExtensions(out int count) => s_glfwGetRequiredInstanceExtensions(out count);
-
-    public static string[] glfwGetRequiredInstanceExtensions()
-    {
-        var ptr = s_glfwGetRequiredInstanceExtensions(out int count);
-
-        var array = new string[count];
-        for (var i = 0; i < count; i++)
-        {
-            array[i] = new string(ptr[i]);
-        }
-
-        return array;
-    }
-
-    //public static VkResult glfwCreateWindowSurface(VkInstance instance, GLFWwindow* window, void* allocator, VkSurfaceKHR* pSurface)
-    //{
-    //    return (VkResult)s_glfwCreateWindowSurface(instance, window, allocator, pSurface);
-    //}
+    public static string glfwGetWin32Adapter(GLFWmonitor* monitor) => new(s_glfwGetWin32Adapter(monitor));
+    public static string glfwGetWin32Monitor(GLFWmonitor* monitor) => new(s_glfwGetWin32Monitor(monitor));
+    public static nint glfwGetWin32Window(GLFWwindow* window) => s_glfwGetWin32Window(window);
 
     static GLFW()
     {
         s_library = LoadGLFWLibrary();
 
+        s_glfwGetVersion = (delegate* unmanaged[Cdecl]<out int, out int, out int, void>)GetSymbol(nameof(glfwGetVersion));
         s_glfwInit = (delegate* unmanaged[Cdecl]<int>)GetSymbol(nameof(glfwInit));
         s_glfwTerminate = (delegate* unmanaged[Cdecl]<int>)GetSymbol(nameof(glfwTerminate));
-        s_glfwInitHint = LoadFunction<glfwInitHint_t>(nameof(glfwInitHint));
-        s_glfwGetVersion = LoadFunction<glfwGetVersion_t>(nameof(glfwGetVersion));
-        s_glfwSetErrorCallback = LoadFunction<glfwSetErrorCallback_t>(nameof(glfwSetErrorCallback));
+        s_glfwInitHint = (delegate* unmanaged[Cdecl]<int, int, void>)GetSymbol(nameof(glfwInitHint));
+        s_glfwSetErrorCallback = (delegate* unmanaged[Cdecl]<glfwErrorCallback, glfwErrorCallback>)GetSymbol(nameof(glfwSetErrorCallback));
 
-        s_glfwWindowHint = LoadFunction<glfwInitHint_t>(nameof(glfwWindowHint));
-        s_glfwCreateWindow = LoadFunction<glfwCreateWindow_t>(nameof(glfwCreateWindow));
-        s_glfwGetPrimaryMonitor = LoadFunction<glfwGetPrimaryMonitor_t>(nameof(glfwGetPrimaryMonitor));
-        s_glfwWindowShouldClose = (delegate* unmanaged[Cdecl]<nint, int>)GetSymbol(nameof(glfwWindowShouldClose));
-        s_glfwGetWindowSize = LoadFunction<glfwGetWindowSize_t>(nameof(glfwGetWindowSize));
-        s_glfwShowWindow = LoadFunction<glfwShowWindow_t>(nameof(glfwShowWindow));
+        s_glfwWindowHint = (delegate* unmanaged[Cdecl]<int, int, void>)GetSymbol(nameof(glfwWindowHint));
+        s_glfwGetPrimaryMonitor = (delegate* unmanaged[Cdecl]<GLFWmonitor*>)GetSymbol(nameof(glfwGetPrimaryMonitor));
 
-        s_glfwPollEvents = LoadFunction<glfwPollEvents_t>(nameof(glfwPollEvents));
+        s_glfwCreateWindow = (delegate* unmanaged[Cdecl]<int, int, byte*, GLFWmonitor*, nint, GLFWwindow*>)GetSymbol(nameof(glfwCreateWindow));
+        s_glfwDestroyWindow = (delegate* unmanaged[Cdecl]<GLFWwindow*, int>)GetSymbol(nameof(glfwDestroyWindow));
+        s_glfwWindowShouldClose = (delegate* unmanaged[Cdecl]<GLFWwindow*, int>)GetSymbol(nameof(glfwWindowShouldClose));
+        s_glfwGetWindowSize = (delegate* unmanaged[Cdecl]<GLFWwindow*, out int, out int, void>)GetSymbol(nameof(glfwGetWindowSize));
+        s_glfwShowWindow = (delegate* unmanaged[Cdecl]<GLFWwindow*, void>)GetSymbol(nameof(glfwShowWindow));
 
-        // Vulkan
-        s_glfwGetRequiredInstanceExtensions = LoadFunction<glfwGetRequiredInstanceExtensions_t>(nameof(glfwGetRequiredInstanceExtensions));
-        //s_glfwCreateWindowSurface = (delegate* unmanaged[Cdecl]<VkInstance, GLFWwindow*, void*, VkSurfaceKHR*, int>)GetSymbol(nameof(glfwCreateWindowSurface));
+        s_glfwPollEvents = (delegate* unmanaged[Cdecl]<void>)GetSymbol(nameof(glfwPollEvents));
+
+        s_glfwGetWin32Adapter = (delegate* unmanaged[Cdecl]<GLFWmonitor*, sbyte*>)GetSymbol(nameof(glfwGetWin32Adapter));
+        s_glfwGetWin32Monitor = (delegate* unmanaged[Cdecl]<GLFWmonitor*, sbyte*>)GetSymbol(nameof(glfwGetWin32Monitor));
+        s_glfwGetWin32Window = (delegate* unmanaged[Cdecl]<GLFWwindow*, nint>)GetSymbol(nameof(glfwGetWin32Window));
     }
 
     private static nint LoadGLFWLibrary()
@@ -337,6 +320,5 @@ public static unsafe class GLFW
         throw new PlatformNotSupportedException("GLFW platform not supported");
     }
 
-    public static T LoadFunction<T>(string name) => LibraryLoader.LoadFunction<T>(s_library, name);
     private static IntPtr GetSymbol(string name) => LibraryLoader.GetSymbol(s_library, name);
 }

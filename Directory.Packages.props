@@ -20,8 +20,8 @@
     <PackageVersion Include="PolySharp" Version="1.8.0" />
     <PackageVersion Include="CommunityToolkit.Diagnostics" Version="8.0.0" />
 
-    <PackageVersion Include="Vortice.Win32.Graphics.Direct3D11" Version="1.8.6" />
-    <PackageVersion Include="Vortice.Win32.Graphics.Direct3D12" Version="1.8.6" />
+    <PackageVersion Include="Vortice.Win32.Graphics.Direct3D11" Version="1.8.8" />
+    <PackageVersion Include="Vortice.Win32.Graphics.Direct3D12" Version="1.8.8" />
     <PackageVersion Include="Vortice.Vulkan" Version="1.5.22" />
 
     <!-- Samples -->

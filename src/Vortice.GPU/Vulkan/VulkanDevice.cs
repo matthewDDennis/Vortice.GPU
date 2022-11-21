@@ -17,7 +17,7 @@ internal unsafe class VulkanDevice : GPUDevice
     public static bool IsSupported() => s_isSupported.Value;
 
     private readonly VkInstance _instance;
-    private readonly VkDevice _device;
+    //private readonly VkDevice _device;
 
     public VulkanDevice(ValidationMode validationMode, GPUPowerPreference powerPreference)
         : base(GPUBackendType.Vulkan)
@@ -58,7 +58,7 @@ internal unsafe class VulkanDevice : GPUDevice
 
     public VkInstance VkInstance => _instance;
     public VkPhysicalDevice PhysicalDevice { get; }
-    public VkDevice NativeDevice => _device;
+    //public VkDevice NativeDevice => _device;
 
     /// <summary>
     /// Finalizes an instance of the <see cref="VulkanDevice" /> class.

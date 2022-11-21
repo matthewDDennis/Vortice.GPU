@@ -1,8 +1,7 @@
 // Copyright © Amer Koleci and Contributors.
 // Licensed under the MIT License (MIT). See LICENSE in the repository root for more information.
 
-using System.Runtime.CompilerServices;
-using Vortice.Vulkan;
+using System.Drawing;
 using static Vortice.GPU.GLFW;
 
 namespace Vortice.GPU;
@@ -20,11 +19,11 @@ public enum WindowFlags
     Maximized = 1 << 6,
 }
 
-public sealed class Window 
+public sealed unsafe class Window : ISwapChainSurface
 {
-    private readonly nint _window;
+    private readonly GLFWwindow* _window;
 
-    public unsafe Window(string title, int width, int height, WindowFlags flags = WindowFlags.None)
+    public Window(string title, int width, int height, WindowFlags flags = WindowFlags.None)
     {
         Title = title;
 
@@ -86,14 +85,42 @@ public sealed class Window
         //Handle = hwnd;
 
         glfwGetWindowSize(_window, out width, out height);
-        Extent = new VkExtent2D(width, height);
+        ClientSize = new(width, height);
+
+        if (OperatingSystem.IsWindows())
+        {
+            Kind = SwapChainSurfaceKind.Win32;
+            SurfaceHandle = glfwGetWin32Window(_window);
+        }
+    }
+
+    public void Dispose()
+    {
+        SwapChain?.Dispose();
+
+        glfwDestroyWindow(_window);
     }
 
     public string Title { get; }
-    public VkExtent2D Extent { get; }
-    //public IntPtr Handle { get; }
+    public Size ClientSize { get; }
+
+    #region ISwapChainSurface Members
+    public SwapChainSurfaceKind Kind { get; }
+
+    Size ISwapChainSurface.Size => ClientSize;
+
+    public nint SurfaceDisplay { get; }
+    public nint SurfaceHandle { get; }
+
+    public bool IsFullscreen { get; private set; }
+    #endregion
 
     public bool ShoudClose => glfwWindowShouldClose(_window);
+    public SwapChain? SwapChain { get; private set; }
 
-    //public VkResult CreateSurface(VkInstance instance, VkSurfaceKHR* surface) => glfwCreateWindowSurface(instance, _window, null, surface);
+    public void CreateSwapChain(GPUDevice device)
+    {
+        SwapChainDescription description = new();
+        SwapChain = device.CreateSwapChain(this, description);
+    }
 }

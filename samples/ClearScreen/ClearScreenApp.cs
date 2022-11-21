@@ -1,6 +1,8 @@
 // Copyright © Amer Koleci and Contributors.
 // Licensed under the MIT License (MIT). See LICENSE in the repository root for more information.
 
+using System.Drawing;
+
 namespace Vortice.GPU;
 
 public static class Program
@@ -17,6 +19,25 @@ public static class Program
         //    //using GraphicsDevice device = new(ValidationMode.Enabled);
         //    //using GraphicsBuffer vertexBuffer = GraphicsBuffer.CreateBuffer(device, new BufferDescription(64, BufferUsage.Vertex));
         //}
+
+        protected override void OnTick()
+        {
+            CommandBuffer commandBuffer = GPUDevice.GraphicsQueue.BeginCommandBuffer();
+            Texture? swapChainTexture = commandBuffer.AcquireSwapchainTexture(MainWindow.SwapChain!);
+            if (swapChainTexture != null)
+            {
+                RenderPassColorAttachment colorAttachment = new()
+                {
+                    Texture = swapChainTexture,
+                    ClearColor = Color.CornflowerBlue
+                };
+
+                commandBuffer.BeginRenderPass(colorAttachment);
+                commandBuffer.EndRenderPass();
+            }
+
+            commandBuffer.Commit();
+        }
     }
 
     /// <summary>

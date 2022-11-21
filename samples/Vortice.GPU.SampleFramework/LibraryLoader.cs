@@ -71,20 +71,7 @@ internal static class LibraryLoader
         }
     }
 
-    public static T LoadFunction<T>(nint library, string name)
-    {
-        nint symbol = NativeLibrary.GetExport(library, name);
+    private static nint LoadPlatformLibrary(string libraryName) => NativeLibrary.Load(libraryName);
 
-        return Marshal.GetDelegateForFunctionPointer<T>(symbol);
-    }
-
-    private static nint LoadPlatformLibrary(string libraryName)
-    {
-        return NativeLibrary.Load(libraryName);
-    }
-
-    public static nint GetSymbol(nint library, string symbolName)
-    {
-        return NativeLibrary.GetExport(library, symbolName);
-    }
+    public static nint GetSymbol(nint library, string symbolName) => NativeLibrary.GetExport(library, symbolName);
 }

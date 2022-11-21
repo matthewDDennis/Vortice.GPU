@@ -1,18 +1,18 @@
 ﻿// Copyright © Amer Koleci and Contributors.
 // Licensed under the MIT License (MIT). See LICENSE in the repository root for more information.
 
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using CommunityToolkit.Diagnostics;
 using Win32;
 using Win32.Graphics.Direct3D;
 using Win32.Graphics.Direct3D12;
-using Dxgi = Win32.Graphics.Dxgi;
-using static Win32.Apis;
-using static Win32.Graphics.Dxgi.Apis;
-using static Win32.Graphics.Direct3D12.Apis;
-using CommunityToolkit.Diagnostics;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
-using DxgiInfoQueueFilter = Win32.Graphics.Dxgi.InfoQueueFilter;
 using static Vortice.GPU.D3DUtils;
+using static Win32.Apis;
+using static Win32.Graphics.Direct3D12.Apis;
+using static Win32.Graphics.Dxgi.Apis;
+using Dxgi = Win32.Graphics.Dxgi;
+using DxgiInfoQueueFilter = Win32.Graphics.Dxgi.InfoQueueFilter;
 
 namespace Vortice.GPU.D3D12;
 
@@ -25,6 +25,10 @@ internal unsafe class D3D12Device : GPUDevice
     private readonly ComPtr<Dxgi.IDXGIFactory4> _dxgiFactory;
     private readonly ComPtr<ID3D12Device5> _d3dDevice;
     private readonly D3D12CommandQueue[] _commandQueues = new D3D12CommandQueue[(int)CommandQueueType.Count];
+    private readonly D3D12DescriptorAllocator _resourceAllocator;
+    private readonly D3D12DescriptorAllocator _samplerAllocator;
+    private readonly D3D12DescriptorAllocator _rtvAllocator;
+    private readonly D3D12DescriptorAllocator _dsvAllocator;
 
     public D3D12Device(ValidationMode validationMode, GPUPowerPreference powerPreference)
         : base(GPUBackendType.D3D12)
@@ -121,10 +125,86 @@ internal unsafe class D3D12Device : GPUDevice
            );
         hr.ThrowIfFailed();
 
+        if (validationMode != ValidationMode.Disabled)
+        {
+            //ID3D12DebugDevice1* debugDevice;
+            //if (SUCCEEDED(d3dDevice->QueryInterface(&debugDevice)))
+            //{
+            //    const bool g_D3D12DebugLayer_AllowBehaviorChangingDebugAids = true;
+            //    const bool g_D3D12DebugLayer_ConservativeResourceStateTracking = true;
+            //    const bool g_D3D12DebugLayer_DisableVirtualizedBundlesValidation = false;
+            //
+            //    uint32_t featureFlags = 0;
+            //    if (g_D3D12DebugLayer_AllowBehaviorChangingDebugAids)
+            //        featureFlags |= D3D12_DEBUG_FEATURE_ALLOW_BEHAVIOR_CHANGING_DEBUG_AIDS;
+            //    if (g_D3D12DebugLayer_ConservativeResourceStateTracking)
+            //        featureFlags |= D3D12_DEBUG_FEATURE_CONSERVATIVE_RESOURCE_STATE_TRACKING;
+            //    if (g_D3D12DebugLayer_DisableVirtualizedBundlesValidation)
+            //        featureFlags |= D3D12_DEBUG_FEATURE_DISABLE_VIRTUALIZED_BUNDLES_VALIDATION;
+            //
+            //    ThrowIfFailed(debugDevice->SetDebugParameter(D3D12_DEBUG_DEVICE_PARAMETER_FEATURE_FLAGS, &featureFlags, sizeof featureFlags));
+            //    debugDevice->Release();
+            //}
+
+            // Configure debug device (if active).
+            using ComPtr<ID3D12InfoQueue> infoQueue = default;
+            if (_d3dDevice.CopyTo(infoQueue.GetAddressOf()).Success)
+            {
+                infoQueue.Get()->SetBreakOnSeverity(MessageSeverity.Corruption, true);
+                infoQueue.Get()->SetBreakOnSeverity(MessageSeverity.Error, true);
+
+                MessageSeverity* enabledSeverities = stackalloc MessageSeverity[5];
+
+                // These severities should be seen all the time
+                enabledSeverities[0] = MessageSeverity.Corruption;
+                enabledSeverities[1] = MessageSeverity.Error;
+                enabledSeverities[2] = MessageSeverity.Warning;
+                enabledSeverities[3] = MessageSeverity.Message;
+
+                if (validationMode == ValidationMode.Verbose)
+                {
+                    // Verbose only filters
+                    enabledSeverities[4] = MessageSeverity.Info;
+                }
+
+                uint disabledMessagesCount = 0;
+                MessageId* disabledMessages = stackalloc MessageId[16];
+                disabledMessages[disabledMessagesCount++] = MessageId.ClearRenderTargetViewMismatchingClearValue;
+                disabledMessages[disabledMessagesCount++] = MessageId.ClearDepthStencilViewMismatchingClearValue;
+                disabledMessages[disabledMessagesCount++] = MessageId.MapInvalidNullRange;
+                disabledMessages[disabledMessagesCount++] = MessageId.UnmapInvalidNullRange;
+                disabledMessages[disabledMessagesCount++] = MessageId.ExecuteCommandListsWrongSwapchainBufferReference;
+                disabledMessages[disabledMessagesCount++] = MessageId.ResourceBarrierMismatchingCommandListType;
+                disabledMessages[disabledMessagesCount++] = MessageId.ExecuteCommandListsGpuWrittenReadbackResourceMapped;
+
+#if D3D12_USE_PIPELINE_LIBRARY
+                disabledMessages.push_back(D3D12_MESSAGE_ID_LOADPIPELINE_NAMENOTFOUND);
+                disabledMessages.push_back(D3D12_MESSAGE_ID_STOREPIPELINE_DUPLICATENAME);
+#endif
+
+                InfoQueueFilter filter = new();
+                filter.AllowList.NumSeverities = (validationMode == ValidationMode.Verbose) ? 5u : 4u;
+                filter.AllowList.pSeverityList = enabledSeverities;
+                filter.DenyList.NumIDs = disabledMessagesCount;
+                filter.DenyList.pIDList = disabledMessages;
+
+                // Clear out the existing filters since we're taking full control of them
+                infoQueue.Get()->PushEmptyStorageFilter();
+
+                infoQueue.Get()->AddStorageFilterEntries(&filter).ThrowIfFailed();
+            }
+        }
+
         for (int i = 0; i < (int)CommandQueueType.Count; i++)
         {
             _commandQueues[i] = new D3D12CommandQueue(this, (CommandQueueType)i);
         }
+
+        // Create CPU descriptor allocators
+        _resourceAllocator = new D3D12DescriptorAllocator(Handle, DescriptorHeapType.CbvSrvUav, 4096);
+        _samplerAllocator = new D3D12DescriptorAllocator(Handle, DescriptorHeapType.Sampler, 256);
+        _rtvAllocator= new D3D12DescriptorAllocator(Handle, DescriptorHeapType.Rtv, 512);
+        _dsvAllocator = new D3D12DescriptorAllocator(Handle, DescriptorHeapType.Dsv, 256);
 
         Dxgi.AdapterDescription1 adapterDesc;
         adapter.Get()->GetDesc1(&adapterDesc).ThrowIfFailed();
@@ -152,6 +232,11 @@ internal unsafe class D3D12Device : GPUDevice
             {
                 _commandQueues[i].Dispose();
             }
+
+            _resourceAllocator.Shutdown();
+            _samplerAllocator.Shutdown();
+            _rtvAllocator.Shutdown();
+            _dsvAllocator.Shutdown();
 
 #if DEBUG
             uint refCount = _d3dDevice.Get()->Release();
@@ -195,11 +280,15 @@ internal unsafe class D3D12Device : GPUDevice
     /// <inheritdoc />
     public override CommandQueue GraphicsQueue => _commandQueues[(int)CommandQueueType.Graphics];
 
-    public ID3D12CommandQueue* D3D12GraphicsQueue => _commandQueues[(int)CommandQueueType.Graphics].Handle;
+    public ID3D12CommandQueue* D3D12GraphicsQueue => _commandQueues[(int)CommandQueueType.Graphics].NativeHandle;
 
     /// <inheritdoc />
     public override void WaitIdle()
     {
+        for (int i = 0; i < (int)CommandQueueType.Count; i++)
+        {
+            _commandQueues[i].WaitIdle();
+        }
     }
 
     /// <inheritdoc />
@@ -254,6 +343,52 @@ internal unsafe class D3D12Device : GPUDevice
     protected override SwapChain CreateSwapChainCore(in ISwapChainSurface surface, in SwapChainDescription description)
     {
         return new D3D12SwapChain(this, surface, description);
+    }
+
+    public void HandleDeviceLost()
+    {
+        // TODO
+    }
+
+    public CpuDescriptorHandle AllocateDescriptor(DescriptorHeapType type)
+    {
+        switch (type)
+        {
+            case DescriptorHeapType.CbvSrvUav:
+                return _resourceAllocator.Allocate();
+            case DescriptorHeapType.Sampler:
+                return _samplerAllocator.Allocate();
+            case DescriptorHeapType.Rtv:
+                return _rtvAllocator.Allocate();
+            case DescriptorHeapType.Dsv:
+                return _dsvAllocator.Allocate();
+            default:
+                throw new Exception();
+        }
+    }
+
+    public void FreeDescriptor(DescriptorHeapType type, in CpuDescriptorHandle handle)
+    {
+        if (handle.ptr == 0)
+            return;
+
+        switch (type)
+        {
+            case DescriptorHeapType.CbvSrvUav:
+                _resourceAllocator.Free(handle);
+                break;
+            case DescriptorHeapType.Sampler:
+                _samplerAllocator.Free(handle);
+                break;
+            case DescriptorHeapType.Rtv:
+                _rtvAllocator.Free(handle);
+                break;
+            case DescriptorHeapType.Dsv:
+                _dsvAllocator.Free(handle);
+                break;
+            default:
+                break;
+        }
     }
 
     private void GetAdapter(Dxgi.IDXGIAdapter1** ppAdapter)

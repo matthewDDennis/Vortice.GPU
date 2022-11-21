@@ -3,21 +3,25 @@
 
 using Win32;
 using Win32.Graphics.Direct3D12;
-using static Win32.Apis;
+using Win32.Graphics.Dxgi.Common;
 using static Vortice.GPU.D3D12.D3D12Utils;
 using static Vortice.GPU.D3DUtils;
-using Win32.Graphics.Dxgi.Common;
+using static Win32.Apis;
 
 namespace Vortice.GPU.D3D12;
 
 internal unsafe class D3D12Texture : Texture
 {
-    private readonly ComPtr<ID3D12Resource> _handle;
+    public readonly ID3D12Resource* Handle;
+    public readonly CpuDescriptorHandle RTV;
 
-    public D3D12Texture(GPUDevice device, in TextureDescription description, ID3D12Resource* handle)
+    public D3D12Texture(D3D12Device device, in TextureDescription description, ID3D12Resource* handle)
         : base(device, description)
     {
-        _handle.Attach(handle);
+        Handle = handle;
+
+        RTV = device.AllocateDescriptor(DescriptorHeapType.Rtv);
+        device.Handle->CreateRenderTargetView(Handle, null, RTV);
     }
 
     public D3D12Texture(D3D12Device device, in TextureDescription description, void* initialData)
@@ -25,7 +29,7 @@ internal unsafe class D3D12Texture : Texture
     {
         Format dxgiFormat = ToDXGI(description.Format);
 
-         bool isDepthStencil = description.Format.IsDepthStencilFormat();
+        bool isDepthStencil = description.Format.IsDepthStencilFormat();
 
         HeapProperties heapProps = DefaultHeapProps;
         ResourceFlags resourceFlags = ResourceFlags.None;
@@ -67,6 +71,7 @@ internal unsafe class D3D12Texture : Texture
                 break;
         }
 
+        ID3D12Resource* handle = default;
         HResult hr = device.Handle->CreateCommittedResource(
             &heapProps,
             HeapFlags.None,
@@ -74,8 +79,10 @@ internal unsafe class D3D12Texture : Texture
             ResourceStates.Common,
             null,
             __uuidof<ID3D12Resource>(),
-            _handle.GetVoidAddressOf()
+            (void**)&handle
             );
+        hr.ThrowIfFailed();
+        Handle = handle;
     }
 
     // <summary>
@@ -88,7 +95,7 @@ internal unsafe class D3D12Texture : Texture
     {
         if (disposing)
         {
-            _handle.Dispose();
+            Handle->Release();
         }
     }
 
@@ -96,7 +103,7 @@ internal unsafe class D3D12Texture : Texture
     {
         fixed (char* labelPtr = newLabel)
         {
-            _handle.Get()->SetName((ushort*)labelPtr);
+            Handle->SetName((ushort*)labelPtr);
         }
     }
 }

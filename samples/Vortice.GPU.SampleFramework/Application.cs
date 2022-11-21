@@ -73,7 +73,13 @@ public abstract class Application : IDisposable
     /// <param name="disposing"><c>true</c> if the method was called from <see cref="Dispose()" />; otherwise, <c>false</c>.</param>
     protected virtual void Dispose(bool disposing)
     {
-
+        if (disposing)
+        {
+            GPUDevice.WaitIdle();
+            MainWindow.Dispose();
+            GPUDevice.Dispose();
+            glfwTerminate();
+        }
     }
 
     protected virtual void Initialize()
@@ -89,15 +95,12 @@ public abstract class Application : IDisposable
     public void Run()
     {
         InitializeBeforeRun();
-        Initialize();
 
         while (!MainWindow.ShoudClose)
         {
             OnTick();
             glfwPollEvents();
         }
-
-        glfwTerminate();
     }
 
     /// <summary>Throws an exception if the object has been disposed.</summary>
@@ -113,7 +116,9 @@ public abstract class Application : IDisposable
 
     private void InitializeBeforeRun()
     {
+        MainWindow.CreateSwapChain(GPUDevice);
 
+        Initialize();
     }
 
     private static unsafe void GlfwError(int code, IntPtr message)

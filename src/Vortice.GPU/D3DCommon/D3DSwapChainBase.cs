@@ -1,6 +1,7 @@
 ﻿// Copyright © Amer Koleci and Contributors.
 // Licensed under the MIT License (MIT). See LICENSE in the repository root for more information.
 
+using System.Drawing;
 using Win32;
 using Win32.Graphics.Dxgi;
 using Win32.Graphics.Dxgi.Common;
@@ -61,8 +62,14 @@ internal abstract unsafe class D3DSwapChainBase : SwapChain
                 break;
         }
 
+        _handle.Get()->GetDesc1(&swapChainDesc).ThrowIfFailed();
+        Size = new((int)swapChainDesc.Width, (int)swapChainDesc.Height);
+        BackBufferCount = (int)swapChainDesc.BufferCount;
         AfterResize();
     }
+
+    public Size Size { get; protected set; }
+    public int BackBufferCount { get; }
 
     /// <inheritdoc />
     protected override void Dispose(bool disposing)
@@ -75,7 +82,7 @@ internal abstract unsafe class D3DSwapChainBase : SwapChain
 
     protected abstract void AfterResize();
 
-    public void Present()
+    public HResult Present()
     {
         PresentFlags presentFlags = PresentFlags.None;
         if (_syncInterval == 0 &&
@@ -85,6 +92,6 @@ internal abstract unsafe class D3DSwapChainBase : SwapChain
             presentFlags = PresentFlags.AllowTearing;
         }
 
-        HResult hr = _handle.Get()->Present(_syncInterval, presentFlags);
+        return _handle.Get()->Present(_syncInterval, presentFlags);
     }
 }
