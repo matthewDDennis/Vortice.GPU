@@ -129,6 +129,16 @@ public abstract class GPUDevice : GPUObject
         return CreateBuffer(description, ref MemoryMarshal.GetReference(initialData));
     }
 
+    public unsafe GPUBuffer CreateBuffer<T>(
+        ReadOnlySpan<T> initialData,
+        BufferUsage usage = BufferUsage.ShaderReadWrite,
+        CpuAccessMode cpuAccess = CpuAccessMode.None,
+        string? label = default) where T : unmanaged
+    {
+        BufferDescription description = new(sizeof(T) * initialData.Length, usage, cpuAccess, label);
+        return CreateBuffer(description, ref MemoryMarshal.GetReference(initialData));
+    }
+
     public unsafe Texture CreateTexture<T>(in TextureDescription description, ref T initialData) where T : unmanaged
     {
         Guard.IsGreaterThanOrEqualTo(description.Width, 1, nameof(TextureDescription.Width));
@@ -138,6 +148,11 @@ public abstract class GPUDevice : GPUObject
         {
             return CreateTextureCore(description, initialDataPtr);
         }
+    }
+
+    public Pipeline CreateRenderPipeline(in RenderPipelineDescription description)
+    {
+        return CreateRenderPipelineCore(description);
     }
 
     public SwapChain CreateSwapChain(in ISwapChainSurface surface, in SwapChainDescription description)
@@ -151,5 +166,6 @@ public abstract class GPUDevice : GPUObject
     protected abstract unsafe GPUBuffer CreateBufferCore(in BufferDescription description, void* initialData);
     protected abstract unsafe Texture CreateTextureCore(in TextureDescription description, void* initialData);
     protected abstract SwapChain CreateSwapChainCore(in ISwapChainSurface surface, in SwapChainDescription description);
+    protected abstract Pipeline CreateRenderPipelineCore(in RenderPipelineDescription description);
 }
 

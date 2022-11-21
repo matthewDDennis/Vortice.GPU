@@ -345,6 +345,11 @@ internal unsafe class D3D12Device : GPUDevice
         return new D3D12SwapChain(this, surface, description);
     }
 
+    protected override Pipeline CreateRenderPipelineCore(in RenderPipelineDescription description)
+    {
+        return new D3D12Pipeline(this, description);
+    }
+
     public void HandleDeviceLost()
     {
         // TODO

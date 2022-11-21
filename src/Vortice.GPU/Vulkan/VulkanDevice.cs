@@ -6,6 +6,7 @@ using Vortice.Vulkan;
 using static Vortice.Vulkan.Vulkan;
 using static Vortice.GPU.Vulkan.VulkanUtils;
 using Win32;
+using Vortice.GPU.D3D12;
 
 namespace Vortice.GPU.Vulkan;
 
@@ -147,6 +148,11 @@ internal unsafe class VulkanDevice : GPUDevice
     }
 
     protected override SwapChain CreateSwapChainCore(in ISwapChainSurface surface, in SwapChainDescription description)
+    {
+        throw new NotImplementedException();
+    }
+
+    protected override Pipeline CreateRenderPipelineCore(in RenderPipelineDescription description)
     {
         throw new NotImplementedException();
     }

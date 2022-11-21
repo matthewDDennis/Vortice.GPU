@@ -14,12 +14,25 @@ public readonly record struct BufferDescription
     public BufferDescription(
         ulong size,
         BufferUsage usage = BufferUsage.ShaderReadWrite,
-        CpuAccessMode access = CpuAccessMode.None,
+        CpuAccessMode cpuAccess = CpuAccessMode.None,
         string? label = default)
     {
         Usage = usage;
         Size = size;
-        CpuAccess = access;
+        CpuAccess = cpuAccess;
+        Label = label;
+    }
+
+    [SetsRequiredMembers]
+    public BufferDescription(
+        int size,
+        BufferUsage usage = BufferUsage.ShaderReadWrite,
+        CpuAccessMode cpuAccess = CpuAccessMode.None,
+        string? label = default)
+    {
+        Size = (ulong)size;
+        Usage = usage;
+        CpuAccess = cpuAccess;
         Label = label;
     }
 
